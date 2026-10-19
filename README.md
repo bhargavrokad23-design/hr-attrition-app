@@ -1,3 +1,6 @@
+## 🌐 Live Demo
+👉 **Click here to open the live app:** [Employee Attrition Prediction App](https://hr-attrition-app-7bgthchjifeqnsqgqyhqyg.streamlit.app)
+
 # 🧑‍💼 Employee Attrition Prediction System
 
 > **🔮 An interactive, ML-powered HR Analytics & Resignation Risk Prediction Web Application built with Streamlit, Scikit-Learn, and Plotly.**
