@@ -55,6 +55,6 @@ Powered by **Plotly Express** for deep-dive visual exploration:
 
 ```text
 📦 hr-attrition-app
+ ┣ 📜 README.md           # Project documentation
  ┣ 📜 app.py              # Main Streamlit application & ML pipeline
- ┣ 📜 requirements.txt    # Required Python dependencies for deployment
- ┗ 📜 README.md           # Project documentation
+ ┗  📜 requirements.txt    # Required Python dependencies for deployment
