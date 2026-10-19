@@ -57,4 +57,4 @@ Powered by **Plotly Express** for deep-dive visual exploration:
 📦 hr-attrition-app
  ┣ 📜 README.md           # Project documentation
  ┣ 📜 app.py              # Main Streamlit application & ML pipeline
- ┗  📜 requirements.txt    # Required Python dependencies for deployment
+ ┗ 📜 requirements.txt    # Required Python dependencies for deployment
