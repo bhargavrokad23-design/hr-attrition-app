@@ -238,22 +238,37 @@ st.markdown(
 @st.cache_resource
 def load_and_train_model():
     np.random.seed(42)
-    n_samples = 600
+    n_samples = 1000
 
     age = np.random.randint(22, 60, size=n_samples)
-    monthly_income = np.random.randint(20000, 150000, size=n_samples)
-    years_at_company = np.random.randint(1, 15, size=n_samples)
-    job_satisfaction = np.random.randint(1, 5, size=n_samples)
-    overtime = np.random.choice([0, 1], size=n_samples, p=[0.7, 0.3])
-    departments = np.random.choice(['Human Resources', 'Research & Development', 'Sales'], size=n_samples, p=[0.2, 0.5, 0.3])
-    commute_distance = np.random.randint(1, 30, size=n_samples)
+    # Experience company me max age-21 se zyada nahi ho sakti
+    years_at_company = np.array([np.random.randint(0, max(1, a - 21)) for a in age])
+    
+    # Base Salary + Tenure Growth (₹7,500/year) + Age/Seniority Factor + Noise
+    base_salary = 28000
+    tenure_growth = years_at_company * 7500
+    age_seniority = (age - 22) * 1200
+    salary_noise = np.random.normal(0, 4500, size=n_samples)
+    monthly_income = np.clip(base_salary + tenure_growth + age_seniority + salary_noise, 22000, 220000).astype(int)
 
-    attrition_prob = (
-        0.4 * (overtime == 1) +
-        0.3 * (job_satisfaction <= 2) +
-        0.2 * (monthly_income < 40000)
+    job_satisfaction = np.random.choice([1, 2, 3, 4], size=n_samples, p=[0.12, 0.23, 0.40, 0.25])
+    overtime = np.random.choice([0, 1], size=n_samples, p=[0.72, 0.28])
+    departments = np.random.choice(['Human Resources', 'Research & Development', 'Sales'], size=n_samples, p=[0.15, 0.55, 0.30])
+    commute_distance = np.random.randint(1, 35, size=n_samples)
+
+    # Balanced risk score (tenure aur income retention boost dete hain)
+    risk_score = (
+        0.26 * (overtime == 1) +
+        0.24 * (job_satisfaction == 1) +
+        0.12 * (job_satisfaction == 2) +
+        0.15 * (monthly_income < 38000) -
+        0.18 * (years_at_company >= 5) -
+        0.12 * (monthly_income > 85000) +
+        np.random.normal(0, 0.08, size=n_samples)
     )
-    attrition = (attrition_prob > 0.4).astype(int)
+    
+    # 0.28 threshold natural ~16% corporate attrition rate maintain karta hai
+    attrition = (risk_score > 0.28).astype(int)
 
     df = pd.DataFrame({
         'Age': age,
@@ -284,12 +299,14 @@ with tab1:
 
     with col1:
         st.markdown("### 🧑 Personal Details")
-        age = st.slider("🎂 Employee Age", min_value=20, max_value=65, value=28)
-        income = st.number_input("💰 Monthly Income (₹)", min_value=15000, max_value=200000, value=35000, step=5000)
+        age = st.slider("🎂 Employee Age", min_value=20, max_value=65, value=29)
+        # Expected baseline salary calculate karke smart default provide karna
+        default_income = int(max(25000, 28000 + (3 * 7500) + ((age - 22) * 1200)))
+        income = st.number_input("💰 Monthly Income (₹)", min_value=15000, max_value=250000, value=default_income, step=5000)
 
     with col2:
         st.markdown("### 💼 Work Details")
-        years = st.slider("🏢 Years at Company", min_value=0, max_value=20, value=2)
+        years = st.slider("🏢 Years at Company", min_value=0, max_value=25, value=3)
         satisfaction = st.selectbox(
             "😊 Job Satisfaction Rating",
             options=[1, 2, 3, 4],
@@ -299,7 +316,7 @@ with tab1:
                 3: "🙂 3 - Medium",
                 4: "😄 4 - High"
             }[x],
-            index=1
+            index=2
         )
 
     overtime_text = st.radio(
@@ -314,7 +331,7 @@ with tab1:
     if st.button("🔍 Predict Attrition Status", type="primary", use_container_width=True):
 
         with st.spinner("🧠 Analyzing employee data..."):
-            time.sleep(1.2)
+            time.sleep(1.0)
 
         input_data = pd.DataFrame([[age, income, years, satisfaction, overtime]],
                                   columns=['Age', 'MonthlyIncome', 'YearsAtCompany', 'JobSatisfaction', 'OverTime'])
@@ -324,22 +341,24 @@ with tab1:
         attrition_risk = probabilities[1] * 100
         retention_chance = probabilities[0] * 100
 
-        if attrition_risk < 30:
+        if attrition_risk < 25:
             level = "🟢 Low Risk"
-        elif attrition_risk < 60:
+        elif attrition_risk < 50:
             level = "🟡 Medium Risk"
         else:
             level = "🔴 High Risk"
 
         factors = []
         if overtime == 1:
-            factors.append("⏰ Works overtime")
+            factors.append("⏰ Extended Overtime")
         if satisfaction <= 2:
-            factors.append("😞 Low job satisfaction")
-        if income < 40000:
-            factors.append("💸 Low income")
+            factors.append("😞 Below-average Satisfaction")
+        if income < 38000:
+            factors.append("💸 Below Market Compensation")
+        if years >= 5:
+            factors.append("🛡️ High Tenure Loyalty")
         if not factors:
-            factors.append("🌟 No major risk factors")
+            factors.append("🌟 Stable Workplace Metrics")
         chips_html = "".join(f'<span class="chip">{f}</span>' for f in factors)
 
         if prediction == 1:
@@ -348,7 +367,7 @@ with tab1:
             label = "Resignation Risk"
             glow = "rgba(248, 113, 113, 0.85)"
             ring = "#f87171"
-            reco = "💡 Review compensation 💸 and workload/overtime balance ⚖️."
+            reco = "💡 Review compensation adjustments and workload/burnout factors."
             st.toast("High attrition risk detected!", icon="🚨")
         else:
             title = "✅ Employee is likely to stay! 🎉"
@@ -356,7 +375,7 @@ with tab1:
             label = "Retention Chance"
             glow = "rgba(52, 211, 153, 0.85)"
             ring = "#34d399"
-            reco = "💡 Engagement parameters are stable, keep it up 👍."
+            reco = "💡 Engagement & compensation are well balanced. Maintain trajectory 👍."
             st.balloons()
 
         card = (
